@@ -1,19 +1,28 @@
-import ait
-from ait.core import cfg
-import ait.server
-from ait.server.handlers import *
-from ait.server.server import AITServer
+import os
+import os.path
+
 import nose
 from nose.tools import *
 import mock
 
+import ait.core
+import ait.core.server
+from ait.core import cfg
+from ait.core.server.handler import *
+from ait.core.server.server import AITServer
 
 @mock.patch.object(ait.core.log, 'warn')
-@mock.patch('ait.server.broker.AITBroker')
-@mock.patch.object(ait.server.server.AITServer, '__init__', return_value=None)
-@mock.patch.object(ait.server.server.AITServer, '_create_stream')
+@mock.patch('ait.core.server.broker.AITBroker')
+@mock.patch.object(ait.core.server.server.AITServer, '__init__', return_value=None)
+@mock.patch.object(ait.core.server.server.AITServer, '_create_stream')
 class TestStreamConfigParsing(object):
     test_yaml_file = '/tmp/test.yaml'
+
+    def tearDown(self):
+        ait.config = cfg.AitConfig()
+
+        if os.path.exists(self.test_yaml_file):
+            os.remove(self.test_yaml_file)
 
     def test_no_inbound_streams(self,
                                 create_stream_mock,
@@ -78,8 +87,8 @@ class TestStreamConfigParsing(object):
         assert len(server.inbound_streams) == 1
 
 
-@mock.patch('ait.server.broker.AITBroker')
-@mock.patch.object(ait.server.server.AITServer, '__init__', return_value=None)
+@mock.patch('ait.core.server.broker.AITBroker')
+@mock.patch.object(ait.core.server.server.AITServer, '__init__', return_value=None)
 class TestStreamCreation(object):
 
     def test_no_stream_type(self,
@@ -168,7 +177,7 @@ class TestStreamCreation(object):
                                   % 'inbound stream input'):
             server._create_stream(config, 'inbound')
 
-    @mock.patch.object(ait.server.server.AITServer, '_create_handler')
+    @mock.patch.object(ait.core.server.server.AITServer, '_create_handler')
     def test_successful_stream_creation(self,
                                         create_handler_mock,
                                         server_init_mock,
@@ -177,13 +186,13 @@ class TestStreamCreation(object):
         handlers """
         # Testing stream creating with handlers
         server = AITServer()
-        server.broker = ait.server.broker.AITBroker()
+        server.broker = ait.core.server.broker.AITBroker()
 
         config = {'name': 'some_stream',
                   'input': 'some_input',
                   'handlers': ['some-handler']}
         created_stream = server._create_stream(config, 'inbound')
-        assert type(created_stream) == ait.server.stream.ZMQInputStream
+        assert type(created_stream) == ait.core.server.stream.ZMQInputStream
         assert created_stream.name == 'some_stream'
         assert created_stream.input_ == 'some_input'
         assert type(created_stream.handlers) == list
@@ -192,14 +201,14 @@ class TestStreamCreation(object):
         config = cfg.AitConfig(config={'name': 'some_stream',
                                        'input': 'some_input'})
         created_stream = server._create_stream(config, 'inbound')
-        assert type(created_stream) == ait.server.stream.ZMQInputStream
+        assert type(created_stream) == ait.core.server.stream.ZMQInputStream
         assert created_stream.name == 'some_stream'
         assert created_stream.input_ == 'some_input'
         assert type(created_stream.handlers) == list
 
 
-@mock.patch('ait.server.broker.AITBroker')
-@mock.patch.object(ait.server.server.AITServer, '__init__', return_value=None)
+@mock.patch('ait.core.server.broker.AITBroker')
+@mock.patch.object(ait.core.server.server.AITServer, '__init__', return_value=None)
 class TestHandlerCreation(object):
 
     def test_no_handler_config(self,
@@ -218,9 +227,9 @@ class TestHandlerCreation(object):
         """ Tests handler is successfully created when it has no configs """
         server = AITServer()
 
-        config = {'name': 'ait.server.handlers.example_handler'}
+        config = {'name': 'ait.core.server.handler.Handler'}
         handler = server._create_handler(config)
-        assert type(handler) == ait.server.handlers.example_handler.ExampleHandler
+        assert type(handler) == ait.core.server.handler.Handler
         assert handler.input_type is None
         assert handler.output_type is None
 
@@ -230,9 +239,10 @@ class TestHandlerCreation(object):
         """ Tests handler is successfully created when it has configs """
         server = AITServer()
 
-        config = {'name': 'ait.server.handlers.example_handler', 'input_type': 'int', 'output_type': 'int'}
+        # config = {'name': 'ait.core.server.handlers.example_handler', 'input_type': 'int', 'output_type': 'int'}
+        config = {'name': 'ait.core.server.handler.Handler', 'input_type': 'int', 'output_type': 'int'}
         handler = server._create_handler(config)
-        assert type(handler) == ait.server.handlers.example_handler.ExampleHandler
+        assert type(handler) == ait.core.server.handler.Handler
         assert handler.input_type == 'int'
         assert handler.output_type == 'int'
 
@@ -249,10 +259,16 @@ class TestHandlerCreation(object):
 
 @mock.patch.object(ait.core.log, 'warn')
 @mock.patch.object(ait.core.log, 'error')
-@mock.patch('ait.server.broker.AITBroker')
-@mock.patch.object(ait.server.server.AITServer, '__init__', return_value=None)
+@mock.patch('ait.core.server.broker.AITBroker')
+@mock.patch.object(ait.core.server.server.AITServer, '__init__', return_value=None)
 class TestPluginConfigParsing(object):
     test_yaml_file = '/tmp/test.yaml'
+
+    def tearDown(self):
+        ait.config = cfg.AitConfig()
+
+        if os.path.exists(self.test_yaml_file):
+            os.remove(self.test_yaml_file)
 
     def test_no_plugins_listed(self,
                                server_init_mock,
@@ -275,8 +291,8 @@ class TestPluginConfigParsing(object):
             'No plugins specified in config.')
 
 
-@mock.patch('ait.server.broker.AITBroker')
-@mock.patch.object(ait.server.server.AITServer, '__init__', return_value=None)
+@mock.patch('ait.core.server.broker.AITBroker')
+@mock.patch.object(ait.core.server.server.AITServer, '__init__', return_value=None)
 class TestPluginCreation(object):
 
     def test_plugin_with_no_config(self,
@@ -309,13 +325,13 @@ class TestPluginCreation(object):
         """ Tests that warning logged if plugin has no inputs and
         plugin created anyways """
         server = AITServer()
-        server.broker = ait.server.broker.AITBroker()
+        server.broker = ait.core.server.broker.AITBroker()
 
-        config = {'name': 'ait.server.plugins.example_plugin',
+        config = {'name': 'ait.core.server.plugin.Plugin',
                   'outputs': 'some_stream'}
         server._create_plugin(config)
 
-        log_warn_mock.assert_called_with('No plugin inputs specified for ait.server.plugins.example_plugin')
+        log_warn_mock.assert_called_with('No plugin inputs specified for ait.core.server.plugin.Plugin')
 
     @mock.patch.object(ait.core.log, 'warn')
     def test_plugin_missing_outputs(self,
@@ -325,13 +341,13 @@ class TestPluginCreation(object):
         """ Tests that warning logged if plugin has no inputs and
         plugin created anyways """
         server = AITServer()
-        server.broker = ait.server.broker.AITBroker()
+        server.broker = ait.core.server.broker.AITBroker()
 
-        config = {'name': 'ait.server.plugins.example_plugin',
+        config = {'name': 'ait.core.server.plugin.Plugin',
                   'inputs': 'some_stream'}
         server._create_plugin(config)
 
-        log_warn_mock.assert_called_with('No plugin outputs specified for ait.server.plugins.example_plugin')
+        log_warn_mock.assert_called_with('No plugin outputs specified for ait.core.server.plugin.Plugin')
 
     def test_plugin_name_already_in_use(self,
                                         server_init_mock,
@@ -339,10 +355,10 @@ class TestPluginCreation(object):
         """ Tests that error raised if name already in use """
         server = AITServer()
 
-        server.plugins = [FakeStream(name='ExamplePlugin')]
-        config = {'name': 'example_plugin', 'inputs': 'some_inputs'}
+        server.plugins = [FakeStream(name='Plugin')]
+        config = {'name': 'Plugin', 'inputs': 'some_inputs'}
         with assert_raises_regexp(ValueError,
-                                  'Plugin name already exists. Please rename.'):
+                                  'Plugin "Plugin" already loaded. Only one plugin of a given name is allowed'):
             server._create_plugin(config)
 
     def test_plugin_doesnt_exist(self,

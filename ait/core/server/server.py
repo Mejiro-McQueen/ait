@@ -3,8 +3,8 @@ import gevent.monkey; gevent.monkey.patch_all()
 from importlib import import_module
 import sys
 
-import ait
-import ait.server
+# import ait
+import ait.core.server
 from stream import PortInputStream, ZMQInputStream, PortOutputStream
 from broker import AITBroker
 from ait.core import log, cfg
@@ -38,9 +38,7 @@ class AITServer(object):
                            self.broker.inbound_streams +
                            self.broker.outbound_streams)
 
-        self._start_all_greenlets()
-
-    def _start_all_greenlets(self):
+    def wait(self):
         """
         Starts all greenlets for concurrent processing.
         Joins over all greenlets that are not servers.
@@ -173,8 +171,9 @@ class AITServer(object):
 
         handler_name = config['name']
         # try to create handler
-        class_name = handler_name.split('.')[-1].title().replace('_', '')
-        module = import_module(handler_name)
+        module_name = handler_name.rsplit('.', 1)[0]
+        class_name = handler_name.rsplit('.', 1)[-1]
+        module = import_module(module_name)
         handler_class = getattr(module, class_name)
         instance = handler_class(**config)
 
@@ -221,12 +220,18 @@ class AITServer(object):
         if name is None:
             raise(cfg.AitConfigMissing('plugin name'))
 
-        class_name = name.split('.')[-1].title().replace('_', '')
+        # TODO I don't think we actually care about this being unique? Left over from
+        # previous conversations about stuff?
+        module_name = name.rsplit('.', 1)[0]
+        class_name = name.rsplit('.', 1)[-1]
         if class_name in [x.name for x in (self.outbound_streams +
                                            self.inbound_streams +
                                            self.servers +
                                            self.plugins)]:
-            raise ValueError('Plugin name already exists. Please rename.')
+            raise ValueError(
+                'Plugin "{}" already loaded. Only one plugin of a given name is allowed'.
+                format(class_name)
+            )
 
         plugin_inputs = config.get('inputs', None)
         if plugin_inputs is None:
@@ -239,7 +244,7 @@ class AITServer(object):
             subscribers = [ ]
 
         # try to create plugin
-        module = import_module(name)
+        module = import_module(module_name)
         plugin_class = getattr(module, class_name)
         instance = plugin_class(plugin_inputs,
                                 subscribers,
@@ -248,12 +253,3 @@ class AITServer(object):
                                           'zmq_proxy_xpub_url': self.broker.XPUB_URL})
 
         return instance
-
-
-def main():
-    log.info("Starting AIT Server...")
-    AITServer()
-
-
-if __name__ == "__main__":
-    main()

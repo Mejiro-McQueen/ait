@@ -1,5 +1,7 @@
 import __builtin__
 
+from ait.core import log, tlm
+
 
 class Handler(object):
     """
@@ -61,3 +63,44 @@ class Handler(object):
             'This handle method must be implemented by a custom handler class ' +
             'that inherits from this abstract Handler. This abstract Handler ' +
             'class should not be instantiated.'))
+
+
+class PacketHandler(Handler):
+
+    def __init__(self, input_type=None, output_type=None, **kwargs):
+        super(PacketHandler, self).__init__(input_type, output_type)
+        self.packet = kwargs.get('packet', None)
+
+        if not self.packet:
+            msg = 'PacketHandler: No packet name provided in handler config as key "packet"'
+            raise ValueError(msg)
+
+        tlm_dict = tlm.getDefaultDict()
+        if self.packet not in tlm_dict:
+            msg = 'PacketHandler: Packet name {} not present in telemetry dictionary'.format(self.packet)
+            msg += ' Available packet types are {}'.format(tlm_dict.keys())
+            raise ValueError(msg)
+
+        self._pkt_defn = tlm_dict[self.packet]
+
+    def handle(self, input_data):
+        # this is being published to ZMQ - needs to work
+        return (self._pkt_defn.uid, input_data)
+
+
+class CcsdsPacketHandler(Handler):
+
+    def __init__(self, input_type, output_type=None):
+        super(CcsdsPacketHandler, self).__init__(input_type, output_type)
+
+    def handle(self, input_data):
+        return input_data + 5
+
+
+class TmTransFrameDecodeHandler(Handler):
+
+    def __init__(self, input_type, output_type=None):
+        super(TmTransFrameDecodeHandler, self).__init__(input_type, output_type)
+
+    def handle(self, input_data):
+        return input_data + 5

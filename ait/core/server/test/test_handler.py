@@ -1,7 +1,7 @@
-from ait.server.handler import Handler
 from nose.tools import *
 import mock
 
+from ait.core.server.handler import Handler
 
 class TestHandlerClassWithInputOutputTypes(object):
     handler = Handler(input_type='int', output_type='str')
@@ -17,13 +17,11 @@ class TestHandlerClassWithInputOutputTypes(object):
         valid = self.handler.validate_input('2')
         assert valid == 2
         # test unsuccessful conversions
-        with assert_raises_regexp(ValueError,
-                                  'invalid literal'):
+        with assert_raises_regexp(ValueError, 'invalid literal'):
             self.handler.validate_input('a string')
 
-    @mock.patch('ait.server.handler.Handler.handle', return_value='SpecialReturn')
-    def test_execute_handler_returns_handle_return_on_input(self,
-                                                                    handle_mock):
+    @mock.patch('ait.core.server.handler.Handler.handle', return_value='SpecialReturn')
+    def test_execute_handler_returns_handle_return_on_input(self, handle_mock):
         returned = self.handler.execute_handler('2')
         assert returned == 'SpecialReturn'
 
@@ -51,9 +49,8 @@ class TestHandlerClassWithoutInputOutputTypes(object):
                                    'Handler class should not be instantiated.')):
             self.handler.handle('some_input')
 
-    @mock.patch('ait.server.handler.Handler.handle', return_value='SpecialReturn')
-    def test_execute_handler_returns_handle_return_on_input(self,
-                                                            handle_mock):
+    @mock.patch('ait.core.server.handler.Handler.handle', return_value='SpecialReturn')
+    def test_execute_handler_returns_handle_return_on_input(self, handle_mock):
         returned = self.handler.execute_handler('2')
         assert returned == 'SpecialReturn'
 

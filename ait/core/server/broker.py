@@ -3,7 +3,7 @@ import gevent
 import gevent.monkey; gevent.monkey.patch_all()
 
 import ait.core
-import ait.server
+import ait.core.server
 from ait.core import log
 
 
@@ -21,9 +21,9 @@ class AITBroker(gevent.Greenlet):
     def __init__(self):
         self.context = zmq.Context()
         self.XSUB_URL = ait.config.get('server.xsub',
-                                        ait.server.DEFAULT_XSUB_URL)
+                                        ait.SERVER_DEFAULT_XSUB_URL)
         self.XPUB_URL = ait.config.get('server.xpub',
-                                        ait.server.DEFAULT_XPUB_URL)
+                                        ait.SERVER_DEFAULT_XPUB_URL)
 
         gevent.Greenlet.__init__(self)
 

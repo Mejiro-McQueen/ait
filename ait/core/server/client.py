@@ -6,7 +6,7 @@ import gevent.monkey; gevent.monkey.patch_all()
 import zmq.green as zmq
 import socket
 
-import ait
+import ait.core
 from ait.core import log
 
 
@@ -19,8 +19,8 @@ class ZMQClient(object):
 
     def __init__(self,
                  zmq_context,
-                 zmq_proxy_xsub_url=ait.server.DEFAULT_XSUB_URL,
-                 zmq_proxy_xpub_url=ait.server.DEFAULT_XPUB_URL,
+                 zmq_proxy_xsub_url=ait.SERVER_DEFAULT_XSUB_URL,
+                 zmq_proxy_xpub_url=ait.SERVER_DEFAULT_XPUB_URL,
                  **kwargs):
 
         self.context = zmq_context
@@ -58,8 +58,8 @@ class ZMQInputClient(ZMQClient, gevent.Greenlet):
 
     def __init__(self,
                  zmq_context,
-                 zmq_proxy_xsub_url=ait.server.DEFAULT_XSUB_URL,
-                 zmq_proxy_xpub_url=ait.server.DEFAULT_XPUB_URL,
+                 zmq_proxy_xsub_url=ait.SERVER_DEFAULT_XSUB_URL,
+                 zmq_proxy_xpub_url=ait.SERVER_DEFAULT_XPUB_URL,
                  **kwargs):
 
         super(ZMQInputClient, self).__init__(zmq_context,
@@ -100,8 +100,8 @@ class PortOutputClient(ZMQInputClient):
     def __init__(self,
                  input_,
                  zmq_context,
-                 zmq_proxy_xsub_url=ait.server.DEFAULT_XSUB_URL,
-                 zmq_proxy_xpub_url=ait.server.DEFAULT_XPUB_URL,
+                 zmq_proxy_xsub_url=ait.SERVER_DEFAULT_XSUB_URL,
+                 zmq_proxy_xpub_url=ait.SERVER_DEFAULT_XPUB_URL,
                  **kwargs):
 
         super(PortOutputClient, self).__init__(zmq_context,
@@ -128,8 +128,8 @@ class PortInputClient(ZMQClient, gs.DatagramServer):
     def __init__(self,
                  input_,
                  zmq_context,
-                 zmq_proxy_xsub_url=ait.server.DEFAULT_XSUB_URL,
-                 zmq_proxy_xpub_url=ait.server.DEFAULT_XPUB_URL):
+                 zmq_proxy_xsub_url=ait.SERVER_DEFAULT_XSUB_URL,
+                 zmq_proxy_xpub_url=ait.SERVER_DEFAULT_XPUB_URL):
 
         super(PortInputClient, self).__init__(zmq_context,
                                               zmq_proxy_xsub_url,

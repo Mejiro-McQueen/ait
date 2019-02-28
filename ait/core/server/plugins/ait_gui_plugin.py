@@ -1,4 +1,3 @@
-from ait.server.plugin import Plugin
 import gevent
 import gevent.event
 import gevent.util
@@ -22,9 +21,8 @@ import bottle
 import pkg_resources
 
 import ait.core
-
-from ait.core import api, cmd, dmc, evr, limits, log, notify, pcap, tlm, gds
-from ait.core import util
+from ait.core import api, cmd, dmc, evr, limits, log, notify, pcap, tlm, gds, util
+from ait.core.server.plugin import Plugin
 
 
 class Session (object):
