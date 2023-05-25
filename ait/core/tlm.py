@@ -332,17 +332,27 @@ class FieldDefinition(json.SlotSerializer):
 
         val = value
         if not raw and self.enum is not None:
-            try:
-                if isinstance(val, Iterable):
-                    value = [self.enum.get(i) for i in val]
-                else:
+            value = None
+            if isinstance(val, Iterable):
+                value = []
+                for i in val:
+                    try:
+                        value.append(self.enum.get(i))
+                    except Exception as e:
+                        log.error(f"Encountered unknown enum {str(val)} in Field: {self.title}, for value {i}. Abandoning packet.")
+                        raise ValueError(f"Unknown Enum for value: {val} {e}")
+            else:
+                try:
                     value = self.enum.get(val)
-                if value is None:
-                    log.warn(f"Encountered unknown enum {str(value)} in Field: {self.title}, abandoning packet")
-                    raise ValueError(f"Unknown Enum for {value}")
-            except Exception as e:
-                log.error(f"Encountered error evaluation enum for {val}: {e}")
-                raise ValueError(f"Unknown Enum for {value}")
+                except Exception as e:
+                    log.error(f"Encountered unknown enum {str(val)} in Field: {self.title}, for value {val}. Abandoning packet.")
+                    raise ValueError(f"Unknown Enum for value: {val} {e}")
+            #log.info(f"{self.title}, {val=} {value=}")
+
+            if value is None:
+                log.error(f"Encountered unknown enum {str(val)} in Field: {self.title}. Abandoning packet.")
+                raise ValueError(f"Unknown Enum for value: {val}")
+                
         return value
 
     def encode(self, value):
@@ -579,7 +589,7 @@ class Packet:
                 log.error(f'Regular Decode Error: {e}')
                 raise e
             except Exception as e:
-                log.warn(f"error applying dntoeu: {e}")
+                log.error(f"error applying dntoeu: {e}")
                 raise e
         return value
 
@@ -630,15 +640,14 @@ class Packet:
 
         except Exception as e:
             log.error(f"REEEEEEEEE {e}")
-            log.error("Now exiting until your dictionary is fixed.")
-            log.error(val)
-            exit(-1)
+            exit()
 
         #log.error(f"Fieldname {field_name} Was {a} is now {val} with type {type(val)}")
         return val
 
     def items(self):
         for field_name in self.keys():
+            val = None
             try:
                 val = getattr(self, field_name)
                 #print(f"Got val: {val}")
@@ -646,16 +655,16 @@ class Packet:
                 #print(f"Got canonical: {type(val)}")
                 yield (field_name, val)
             except struct.error as e:
-                log.error(f"struct error: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
+                log.error(f"struct error: For packet {self._defn.name}: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
                 return {}
             except ValueError as e:
-                log.error(f"ValueError: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
+                log.error(f"ValueError: For packet {self._defn.name}: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
                 return {}
             except IndexError as e:
-                log.error(f"IndexError: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
+                log.error(f"IndexError: For packet {self._defn.name}: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
                 return {}
             except Exception as e:
-                log.error(f"Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
+                log.error(f"For packet {self._defn.name}: Could not decode a field {field_name} with value {val}. Abandoning packet: {e}")
                 return {}
 
     def keys(self):
@@ -1160,8 +1169,6 @@ class TlmDict(dict):
 
     Tlm Dictionaries provide a Python dictionary (i.e. hashtable)
     interface mapping Packet names to Packet Definitions.
-
-    Don't use UID for lookups, it's basically random, use opcode
     """
 
     def __init__(self, *args, **kwargs):
@@ -1169,27 +1176,12 @@ class TlmDict(dict):
         dictionary filename or YAML string.
         """
         self.filename = None
-        
+
         if len(args) == 1 and len(kwargs) == 0 and type(args[0]) == str:
             dict.__init__(self)
             self.load(args[0])
-  
         else:
             dict.__init__(self, *args, **kwargs)
-
-        self.opcode_to_defn = None
-        # Goofy tlm extensions are preventing opcode map from generating
-        # Remove after SunRISE has abandoned extensions
-
-    def lookup_by_opcode(self, opcode):
-        if not hasattr(self, 'opcode_to_defn') or not self.opcode_to_defn:
-            self.opcode_to_defn = {packet_defn.opcode: packet_defn for packet_defn in self.values()}
-        return self.opcode_to_defn.get(opcode, None)
-
-    def get_opcodes(self):
-        if not hasattr(self, "opcode_to_defn") or not self.opcode_to_defn:
-            self.opcode_to_defn = {packet_defn.opcode: packet_defn for packet_defn in self.values()}
-        return self.opcode_to_defn
 
     def add(self, defn):
         """Adds the given Packet Definition to this Telemetry Dictionary."""
@@ -1226,7 +1218,6 @@ class TlmDict(dict):
 
             if isinstance(stream, IOBase):
                 stream.close()
-
 
     def toJSON(self):  # noqa
         return {name: defn.toJSON() for name, defn in self.items()}
