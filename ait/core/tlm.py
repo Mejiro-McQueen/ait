@@ -1166,9 +1166,9 @@ class RawPacket:
 
 class TlmDict(dict):
     """TlmDict
-
     Tlm Dictionaries provide a Python dictionary (i.e. hashtable)
     interface mapping Packet names to Packet Definitions.
+    Don't use UID for lookups, it's basically random, use opcode
     """
 
     def __init__(self, *args, **kwargs):
@@ -1176,12 +1176,28 @@ class TlmDict(dict):
         dictionary filename or YAML string.
         """
         self.filename = None
-
+        
         if len(args) == 1 and len(kwargs) == 0 and type(args[0]) == str:
             dict.__init__(self)
             self.load(args[0])
+
         else:
             dict.__init__(self, *args, **kwargs)
+
+        self.opcode_to_defn = None
+        # Goofy tlm extensions are preventing opcode map from generating
+        # Remove after SunRISE has abandoned extensions
+
+    def lookup_by_opcode(self, opcode):
+        if not hasattr(self, 'opcode_to_defn') or not self.opcode_to_defn:
+            self.opcode_to_defn = {packet_defn.opcode: packet_defn for packet_defn in self.values()}
+        return self.opcode_to_defn.get(opcode, None)
+
+    def get_opcodes(self):
+        if not hasattr(self, "opcode_to_defn") or not self.opcode_to_defn:
+            self.opcode_to_defn = {packet_defn.opcode: packet_defn for packet_defn in self.values()}
+        return self.opcode_to_defn
+
 
     def add(self, defn):
         """Adds the given Packet Definition to this Telemetry Dictionary."""
