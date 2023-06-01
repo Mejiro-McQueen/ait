@@ -265,7 +265,7 @@ class Cmd(object):
     def encode(self):
         # TODO: Specify Opcode Size
         try:
-            opcode = struct.pack(">H", self.defn.opcode)
+            opcode = self.defn.opcode.to_bytes(self.opcode_size, 'big')
         except struct.error:
             msg = f"The opcode: {hex(self.defn.opcode)} for command {self.name} "
             msg += "does not fit in an unsigned int. Check your Cmd Dictionary."
@@ -421,6 +421,7 @@ class CmdDict(dict): # Daily reminder that this only runs if the pkl does not ex
         """
         self.filename = None
         self.opcodes = {}
+        self.opcode_size = 0
 
         if len(args) == 1 and len(kwargs) == 0 and type(args[0]) == str:
             dict.__init__(self)
